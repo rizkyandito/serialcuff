@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Cuff Control — Serial Plotter</title>
+  <link rel="stylesheet" href="/static/style.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/uplot@1.6.31/dist/uPlot.min.css" />
+  <script src="https://cdn.jsdelivr.net/npm/uplot@1.6.31/dist/uPlot.iife.min.js"></script>
+</head>
+<body>
+  <header>
+    <h1>Cuff Control</h1>
+    <div id="conn-status" class="status off">disconnected</div>
+  </header>
+
+  <section class="panel">
+    <label>Serial Port:
+      <select id="port-select"></select>
+    </label>
+    <button id="btn-refresh">Refresh</button>
+    <button id="btn-connect">Connect</button>
+    <button id="btn-disconnect">Disconnect</button>
+  </section>
+
+  <section class="panel controls">
+    <div class="group">
+      <div class="group-title">Pump <span id="led-pump" class="led"></span></div>
+      <button class="on" data-cmd="p1">Pump ON</button>
+      <button class="off" data-cmd="p0">Pump OFF</button>
+    </div>
+
+    <div class="group">
+      <div class="group-title">Valve 1 (q) <span id="led-valve1" class="led"></span></div>
+      <button class="on" data-cmd="q1">Valve1 ON</button>
+      <button class="off" data-cmd="q0">Valve1 OFF</button>
+    </div>
+
+    <div class="group">
+      <div class="group-title">Valve 2 (r) <span id="led-valve2" class="led"></span></div>
+      <button class="on" data-cmd="r1">Valve2 ON</button>
+      <button class="off" data-cmd="r0">Valve2 OFF</button>
+    </div>
+
+    <div class="group">
+      <div class="group-title">Emergency</div>
+      <button id="btn-all-off" class="all-off">ALL OFF</button>
+    </div>
+  </section>
+
+  <section class="panel record">
+    <button id="btn-record-start">Start Recording</button>
+    <button id="btn-record-stop">Stop Recording</button>
+    <span id="record-status">not recording</span>
+  </section>
+
+  <section class="panel">
+    <div id="plot"></div>
+  </section>
+
+  <section class="panel">
+    <div class="log-header">Log</div>
+    <pre id="log"></pre>
+  </section>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,137 @@
+* { box-sizing: border-box; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  margin: 0;
+  padding: 16px;
+  background: #1e1e1e;
+  color: #e4e4e4;
+}
+
+header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+h1 { margin: 0; font-size: 20px; }
+
+.status {
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.status.on  { background: #16a34a; color: white; }
+.status.off { background: #6b7280; color: white; }
+
+.panel {
+  background: #2a2a2a;
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.panel label { font-size: 14px; }
+
+select, button {
+  font-family: inherit;
+  font-size: 14px;
+  padding: 8px 14px;
+  border-radius: 6px;
+  border: 1px solid #444;
+  background: #3a3a3a;
+  color: #e4e4e4;
+  cursor: pointer;
+}
+button:hover { background: #4a4a4a; }
+button:active { transform: translateY(1px); }
+button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.controls { gap: 24px; }
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 140px;
+}
+.group-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #aaa;
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.led {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #444;
+  box-shadow: inset 0 0 2px #000;
+}
+.led.on {
+  background: #22c55e;
+  box-shadow: 0 0 8px #22c55e, inset 0 0 2px #000;
+}
+
+button.on  { background: #15803d; border-color: #16a34a; }
+button.on:hover  { background: #16a34a; }
+button.off { background: #525252; }
+
+button.all-off {
+  background: #b91c1c;
+  border-color: #dc2626;
+  font-weight: 700;
+  font-size: 16px;
+  padding: 14px 22px;
+}
+button.all-off:hover { background: #dc2626; }
+
+.record { }
+
+#record-status {
+  font-size: 13px;
+  color: #aaa;
+}
+#record-status.on { color: #ef4444; font-weight: 600; }
+
+#plot {
+  width: 100%;
+  height: 360px;
+}
+
+.log-header {
+  font-size: 13px;
+  font-weight: 600;
+  color: #aaa;
+  width: 100%;
+  margin-bottom: 6px;
+}
+
+#log {
+  width: 100%;
+  height: 160px;
+  overflow-y: auto;
+  background: #111;
+  color: #c0c0c0;
+  padding: 8px;
+  margin: 0;
+  font-family: "SF Mono", Consolas, monospace;
+  font-size: 12px;
+  border-radius: 4px;
+  white-space: pre-wrap;
+}
+
+/* uplot overrides for dark theme */
+.uplot { color: #e4e4e4; }
+.u-legend { color: #e4e4e4 !important; }
