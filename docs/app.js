@@ -1,4 +1,4 @@
-const MAX_POINTS = 2000;
+const MAX_POINTS = 5000;
 
 const els = {
   btnConnect: document.getElementById("btn-connect"),
@@ -6,9 +6,12 @@ const els = {
   btnAllOff: document.getElementById("btn-all-off"),
   btnRecStart: document.getElementById("btn-record-start"),
   btnRecStop: document.getElementById("btn-record-stop"),
+  btnPause: document.getElementById("btn-pause"),
+  btnReset: document.getElementById("btn-reset"),
   recordStatus: document.getElementById("record-status"),
   connStatus: document.getElementById("conn-status"),
   browserWarn: document.getElementById("browser-warn"),
+  plotMode: document.getElementById("plot-mode"),
   log: document.getElementById("log"),
   ledPump: document.getElementById("led-pump"),
   ledValve1: document.getElementById("led-valve1"),
@@ -19,7 +22,6 @@ const state = {
   port: null,
   reader: null,
   writer: null,
-  readLoopAbort: null,
   pump: 0,
   valve1: 0,
   valve2: 0,
@@ -31,42 +33,159 @@ const lpfs = new Array(MAX_POINTS).fill(null);
 
 const fmtInt = (v) => (v == null ? "--" : Math.round(v).toString());
 
+// view state — when paused, plot freezes scales until reset
+const view = {
+  paused: false,
+  customX: null, // [min, max] when zoomed/panned
+  customY: null,
+};
+
+function setMode(paused) {
+  view.paused = paused;
+  els.plotMode.textContent = paused ? "PAUSED" : "LIVE";
+  els.plotMode.className = "pill " + (paused ? "paused" : "live");
+  els.btnPause.textContent = paused ? "Resume" : "Pause";
+}
+
+function resetView() {
+  view.customX = null;
+  view.customY = null;
+  setMode(false);
+  redraw(true);
+}
+
 const plot = new uPlot(
   {
     width: document.getElementById("plot").clientWidth,
-    height: 360,
-    title: "A0 Live Plot",
+    height: 420,
+    cursor: {
+      drag: { x: true, y: false, uni: 30 },
+      sync: { key: "cuff" },
+    },
     scales: {
-      x: { time: false },
+      x: {
+        time: false,
+        range: (u, dataMin, dataMax) => {
+          if (view.customX) return view.customX;
+          return [dataMin ?? 0, dataMax ?? 1];
+        },
+      },
       y: {
         auto: true,
-        range: (_u, min, max) => {
-          if (min == null || max == null) return [0, 1];
-          const pad = Math.max((max - min) * 0.1, 1);
-          return [min - pad, max + pad];
+        range: (u, dataMin, dataMax) => {
+          if (view.customY) return view.customY;
+          if (dataMin == null || dataMax == null) return [0, 1];
+          const pad = Math.max((dataMax - dataMin) * 0.1, 1);
+          return [dataMin - pad, dataMax + pad];
         },
       },
     },
     axes: [
-      { label: "Sample", stroke: "#aaa", grid: { stroke: "#333" } },
-      { label: "ADC",    stroke: "#aaa", grid: { stroke: "#333" }, values: (_u, ticks) => ticks.map(fmtInt) },
+      {
+        label: "sample",
+        labelSize: 14,
+        labelFont: "10px var(--mono, monospace)",
+        font: "10px var(--mono, monospace)",
+        stroke: "#5b6573",
+        ticks: { stroke: "#1f2630", width: 1 },
+        grid: { stroke: "#1a212a", width: 1 },
+      },
+      {
+        label: "ADC",
+        labelSize: 14,
+        labelFont: "10px var(--mono, monospace)",
+        font: "10px var(--mono, monospace)",
+        stroke: "#5b6573",
+        ticks: { stroke: "#1f2630", width: 1 },
+        grid: { stroke: "#1a212a", width: 1 },
+        values: (_u, ticks) => ticks.map(fmtInt),
+      },
     ],
     series: [
-      {},
-      { label: "Raw",     stroke: "#60a5fa", width: 1, value: (_u, v) => fmtInt(v) },
-      { label: "LPF 2Hz", stroke: "#f59e0b", width: 2, value: (_u, v) => fmtInt(v) },
+      { value: (_u, v) => fmtInt(v) },
+      { label: "Raw",     stroke: "#06b6d4", width: 1, value: (_u, v) => fmtInt(v) },
+      { label: "LPF 2Hz", stroke: "#f59e0b", width: 1.5, value: (_u, v) => fmtInt(v) },
     ],
+    hooks: {
+      // pause when user box-selects (zoom)
+      setSelect: [(u) => {
+        if (u.select.width > 0) {
+          const xMin = u.posToVal(u.select.left, "x");
+          const xMax = u.posToVal(u.select.left + u.select.width, "x");
+          view.customX = [xMin, xMax];
+          setMode(true);
+        }
+      }],
+    },
   },
   [xs, raws, lpfs],
   document.getElementById("plot"),
 );
 
 window.addEventListener("resize", () => {
-  plot.setSize({ width: document.getElementById("plot").clientWidth, height: 360 });
+  plot.setSize({ width: document.getElementById("plot").clientWidth, height: 420 });
 });
 
+// ---- pan via drag (no shift) + wheel zoom ----
+const plotEl = document.getElementById("plot");
+
+let isPanning = false;
+let panStart = null;
+
+plotEl.addEventListener("mousedown", (e) => {
+  if (e.button !== 0 || e.shiftKey) return; // shift+drag = box-zoom (uPlot default)
+  const rect = plot.over.getBoundingClientRect();
+  const xVal = plot.posToVal(e.clientX - rect.left, "x");
+  if (!Number.isFinite(xVal)) return;
+  isPanning = true;
+  panStart = { clientX: e.clientX, xVal, scale: { ...plot.scales.x } };
+  setMode(true);
+  e.preventDefault();
+});
+
+window.addEventListener("mousemove", (e) => {
+  if (!isPanning) return;
+  const rect = plot.over.getBoundingClientRect();
+  const dx = e.clientX - panStart.clientX;
+  const xRange = plot.scales.x.max - plot.scales.x.min;
+  const dxVal = (dx / rect.width) * xRange;
+  view.customX = [panStart.scale.min - dxVal, panStart.scale.max - dxVal];
+  redraw(true);
+});
+
+window.addEventListener("mouseup", () => {
+  isPanning = false;
+});
+
+plotEl.addEventListener("wheel", (e) => {
+  e.preventDefault();
+  const rect = plot.over.getBoundingClientRect();
+  const xPos = e.clientX - rect.left;
+  const xVal = plot.posToVal(xPos, "x");
+  if (!Number.isFinite(xVal)) return;
+
+  const xMin = plot.scales.x.min;
+  const xMax = plot.scales.x.max;
+  const factor = e.deltaY < 0 ? 0.8 : 1.25;
+  const newMin = xVal - (xVal - xMin) * factor;
+  const newMax = xVal + (xMax - xVal) * factor;
+  view.customX = [newMin, newMax];
+  setMode(true);
+  redraw(true);
+}, { passive: false });
+
+plotEl.addEventListener("dblclick", (e) => {
+  e.preventDefault();
+  resetView();
+});
+
+// ---- redraw scheduler ----
 let pendingRedraw = false;
-function scheduleRedraw() {
+function redraw(force) {
+  if (force) {
+    plot.setData([xs, raws, lpfs]);
+    return;
+  }
   if (pendingRedraw) return;
   pendingRedraw = true;
   setTimeout(() => {
@@ -78,7 +197,7 @@ function scheduleRedraw() {
 function pushSample(raw, lpf) {
   raws.shift(); raws.push(raw);
   lpfs.shift(); lpfs.push(lpf);
-  scheduleRedraw();
+  if (!view.paused) redraw();
 }
 
 function log(msg) {
@@ -98,7 +217,7 @@ function setLed(key, on) {
   el.classList.toggle("on", !!on);
 }
 
-// ---- recording (in-memory, download on stop) ----
+// ---- recording ----
 const recording = {
   active: false,
   t0Ms: 0,
@@ -148,12 +267,9 @@ function recordSample(raw, lpf) {
   recording.rows.push([t.toFixed(4), raw, lpf, state.pump, state.valve1, state.valve2]);
 }
 
-// ---- serial (Web Serial API) ----
+// ---- serial ----
 async function connect() {
-  if (!("serial" in navigator)) {
-    log("Web Serial not supported in this browser");
-    return;
-  }
+  if (!("serial" in navigator)) { log("Web Serial not supported"); return; }
   if (state.port) { log("Already connected"); return; }
 
   try {
@@ -167,10 +283,10 @@ async function connect() {
 
     const info = port.getInfo();
     const label = info.usbVendorId
-      ? `connected (VID:${info.usbVendorId.toString(16)} PID:${info.usbProductId.toString(16)})`
+      ? `VID:${info.usbVendorId.toString(16).toUpperCase()} PID:${info.usbProductId.toString(16).toUpperCase()}`
       : "connected";
     setConnStatus(true, label);
-    log(label);
+    log("Connected: " + label);
 
     readLoop(port);
   } catch (e) {
@@ -181,14 +297,8 @@ async function connect() {
 async function disconnect() {
   if (!state.port) return;
   try {
-    if (state.reader) {
-      await state.reader.cancel();
-      state.reader = null;
-    }
-    if (state.writer) {
-      try { await state.writer.close(); } catch {}
-      state.writer = null;
-    }
+    if (state.reader) { await state.reader.cancel(); state.reader = null; }
+    if (state.writer) { try { await state.writer.close(); } catch {} state.writer = null; }
     try { await state.port.close(); } catch {}
   } catch (e) {
     log("Disconnect error: " + e.message);
@@ -275,22 +385,25 @@ els.btnDisconnect.addEventListener("click", disconnect);
 els.btnAllOff.addEventListener("click", allOff);
 els.btnRecStart.addEventListener("click", startRecording);
 els.btnRecStop.addEventListener("click", stopRecording);
+els.btnPause.addEventListener("click", () => setMode(!view.paused));
+els.btnReset.addEventListener("click", resetView);
 
 document.querySelectorAll("button[data-cmd]").forEach((btn) => {
   btn.addEventListener("click", () => sendCmd(btn.dataset.cmd));
 });
 
 document.addEventListener("keydown", (e) => {
-  if (e.code === "Space" && e.target.tagName !== "INPUT" && e.target.tagName !== "SELECT") {
+  if (e.code === "Space" && e.target.tagName !== "INPUT" && e.target.tagName !== "SELECT" && e.target.tagName !== "BUTTON") {
     e.preventDefault();
     allOff();
     log("[hotkey] ALL OFF");
   }
 });
 
-// ---- browser check ----
 if (!("serial" in navigator)) {
   els.browserWarn.style.display = "";
   els.btnConnect.disabled = true;
   log("Web Serial API tidak tersedia. Pakai Chrome atau Edge.");
 }
+
+setMode(false);

@@ -12,56 +12,74 @@
   <header>
     <h1>Cuff Control</h1>
     <div id="conn-status" class="status off">disconnected</div>
-    <div id="browser-warn" class="status off" style="display:none; background:#b91c1c;">
+    <div id="browser-warn" class="status" style="display:none; color:var(--red); border-color:rgba(239,68,68,0.4); background:rgba(239,68,68,0.08);">
       Browser tidak support Web Serial — pakai Chrome / Edge
     </div>
   </header>
 
   <section class="panel">
-    <button id="btn-connect">Connect</button>
+    <button id="btn-connect" class="primary">Connect</button>
     <button id="btn-disconnect">Disconnect</button>
-    <span style="font-size:12px; color:#aaa;">
-      Tekan Connect → pilih port alat (usbmodem / usbserial)
-    </span>
+    <span class="hint">Klik Connect → pilih port alat (usbmodem / usbserial)</span>
   </section>
 
   <section class="panel controls">
     <div class="group">
-      <div class="group-title">Pump <span id="led-pump" class="led"></span></div>
-      <button class="on" data-cmd="p1">Pump ON</button>
-      <button class="off" data-cmd="p0">Pump OFF</button>
+      <div class="group-title"><span>Pump</span><span id="led-pump" class="led"></span></div>
+      <div class="btn-row">
+        <button class="on" data-cmd="p1">ON</button>
+        <button class="off" data-cmd="p0">OFF</button>
+      </div>
     </div>
 
     <div class="group">
-      <div class="group-title">Valve 1 (q) <span id="led-valve1" class="led"></span></div>
-      <button class="on" data-cmd="q1">Valve1 ON</button>
-      <button class="off" data-cmd="q0">Valve1 OFF</button>
+      <div class="group-title"><span>Valve 1 (q)</span><span id="led-valve1" class="led"></span></div>
+      <div class="btn-row">
+        <button class="on" data-cmd="q1">ON</button>
+        <button class="off" data-cmd="q0">OFF</button>
+      </div>
     </div>
 
     <div class="group">
-      <div class="group-title">Valve 2 (r) <span id="led-valve2" class="led"></span></div>
-      <button class="on" data-cmd="r1">Valve2 ON</button>
-      <button class="off" data-cmd="r0">Valve2 OFF</button>
+      <div class="group-title"><span>Valve 2 (r)</span><span id="led-valve2" class="led"></span></div>
+      <div class="btn-row">
+        <button class="on" data-cmd="r1">ON</button>
+        <button class="off" data-cmd="r0">OFF</button>
+      </div>
     </div>
 
     <div class="group">
-      <div class="group-title">Emergency</div>
-      <button id="btn-all-off" class="all-off">ALL OFF</button>
+      <div class="group-title"><span>Emergency</span><span class="kbd">SPACE</span></div>
+      <button id="btn-all-off" class="danger">ALL OFF</button>
     </div>
   </section>
 
-  <section class="panel record">
-    <button id="btn-record-start">Start Recording</button>
+  <section class="panel">
+    <button id="btn-record-start" class="primary">Start Recording</button>
     <button id="btn-record-stop">Stop &amp; Download CSV</button>
     <span id="record-status">not recording</span>
   </section>
 
-  <section class="panel">
+  <section class="panel plot-card">
+    <div class="plot-toolbar">
+      <span class="title">A0 Live Plot</span>
+      <span id="plot-mode" class="pill live">LIVE</span>
+      <button id="btn-pause">Pause</button>
+      <button id="btn-reset">Reset View</button>
+    </div>
     <div id="plot"></div>
+    <div class="plot-toolbar" style="border-top: 1px solid var(--border); border-bottom: none; padding: 8px 16px;">
+      <span class="hint">
+        <span class="kbd">drag</span> pan &nbsp;·&nbsp;
+        <span class="kbd">wheel</span> zoom &nbsp;·&nbsp;
+        <span class="kbd">shift+drag</span> box-zoom &nbsp;·&nbsp;
+        <span class="kbd">dblclick</span> reset
+      </span>
+    </div>
   </section>
 
-  <section class="panel">
-    <div class="log-header">Log</div>
+  <section class="panel log-card">
+    <div class="group-title">Log</div>
     <pre id="log"></pre>
   </section>
 
